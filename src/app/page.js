@@ -1,103 +1,193 @@
-import Image from "next/image";
+// "use client";
+// import { useEffect, useState } from "react";
+// import StockCard from "../components/StockCard";
+// import { fetchStockQuote, fetchStockProfile } from "../utils/finnhub";
 
-export default function Home() {
+// const stockSymbols = ["AAPL", "TSLA", "GOOG", "AMZN", "MSFT"]; // only 5 for free tier
+
+// export default function DashboardPage() {
+//   const [stocks, setStocks] = useState([]);
+
+//   useEffect(() => {
+//     async function loadStocks() {
+//       const stockData = [];
+
+//       for (let symbol of stockSymbols) {
+//         const [quote, profile] = await Promise.all([
+//           fetchStockQuote(symbol),
+//           fetchStockProfile(symbol),
+//         ]);
+
+//         if (quote && profile) {
+//           stockData.push({
+//             logo: profile.logo,
+//             name: profile.name,
+//             symbol: profile.ticker,
+//             current: quote.c,
+//             high: quote.h,
+//             low: quote.l,
+//             change: ((quote.c - quote.pc) / quote.pc * 100).toFixed(2),
+//           });
+//         }
+//       }
+
+//       setStocks(stockData);
+//     }
+
+//     loadStocks();
+//   }, []);
+
+//   if (stocks.length === 0) return <p className="p-8 text-gray-500">Loading stocks...</p>;
+
+//   return (
+//     <div className="bg-green-50 min-h-screen p-8">
+//       <h1 className="text-3xl font-bold text-green-900 mb-8">Market Dashboard</h1>
+//       <div className="space-y-6">
+//         {stocks.map(stock => (
+//           <StockCard
+//             key={stock.symbol}
+//             logo={stock.logo}
+//             name={stock.name}
+//             symbol={stock.symbol}
+//             current={stock.current}
+//             high={stock.high}
+//             low={stock.low}
+//             change={stock.change}
+//           />
+//         ))}
+//       </div>
+//     </div>
+//   );
+// }
+"use client";
+import { useEffect, useState } from "react";
+import StockCard from "../components/StockCard";
+import { fetchStockProfile, fetchStockQuote } from "../utils/finnhub";
+
+const API_KEY = "d3h51epr01qpep694urgd3h51epr01qpep694us0";
+const stockSymbols = ["AAPL", "TSLA", "GOOGL", "AMZN", "MSFT"];
+
+export default function DashboardPage() {
+  const [stocks, setStocks] = useState([]);
+  const [prices, setPrices] = useState({}); // holds current, high, low, change
+  const [marketOpen, setMarketOpen] = useState(false);
+
+  // Fetch stock profiles and initial quotes
+  useEffect(() => {
+    async function loadStocks() {
+      const stockData = [];
+      const initialPrices = {};
+
+      for (let symbol of stockSymbols) {
+        const [profile, quote] = await Promise.all([
+          fetchStockProfile(symbol),
+          fetchStockQuote(symbol),
+        ]);
+
+        if (profile) {
+          stockData.push({
+            logo: profile.logo,
+            name: profile.name,
+            symbol: profile.ticker,
+          });
+        }
+
+        if (quote) {
+          initialPrices[symbol] = {
+            current: quote.c,
+            high: quote.h,
+            low: quote.l,
+            change: (((quote.c - quote.pc) / quote.pc) * 100).toFixed(2),
+          };
+        }
+      }
+
+      setStocks(stockData);
+      setPrices(initialPrices);
+    }
+
+    loadStocks();
+  }, []);
+
+  // Check if US market is open
+  useEffect(() => {
+    async function checkMarket() {
+      try {
+        const res = await fetch(
+          `https://finnhub.io/api/v1/stock/market-status?exchange=US&token=${API_KEY}`
+        );
+        const data = await res.json();
+        setMarketOpen(data.isOpen);
+      } catch (err) {
+        console.warn("Could not fetch market status:", err);
+      }
+    }
+    checkMarket();
+  }, []);
+
+  // Real-time price updates via WebSocket
+  useEffect(() => {
+    if (!marketOpen) return; // only connect if market is open
+
+    const socket = new WebSocket(`wss://ws.finnhub.io?token=${API_KEY}`);
+
+    socket.onopen = () => {
+      stockSymbols.forEach(symbol => {
+        socket.send(JSON.stringify({ type: "subscribe", symbol }));
+      });
+    };
+
+    socket.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      if (msg.type === "trade" && msg.data) {
+        msg.data.forEach(trade => {
+          setPrices(prev => ({
+            ...prev,
+            [trade.s]: {
+              ...prev[trade.s], // keep high, low, change
+              current: trade.p, // update only current price
+            },
+          }));
+        });
+      }
+    };
+
+    socket.onerror = (err) => {
+      console.warn("WebSocket warning (maybe market closed or key issue):", err);
+    };
+
+    return () => {
+      if (socket.readyState === WebSocket.OPEN) {
+        stockSymbols.forEach(symbol => {
+          socket.send(JSON.stringify({ type: "unsubscribe", symbol }));
+        });
+      }
+      socket.close();
+    };
+  }, [marketOpen]);
+
+  if (stocks.length === 0) return <p className="p-8 text-gray-500">Loading stocks...</p>;
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+    <div className="bg-green-50 min-h-screen p-8">
+      <h1 className="text-3xl font-bold text-green-900 mb-8">Market Dashboard</h1>
+      <div className="space-y-6">
+        {stocks.map(stock => {
+          const price = prices[stock.symbol] ?? {};
+          return (
+            <StockCard
+              key={stock.symbol}
+              logo={stock.logo}
+              name={stock.name}
+              symbol={stock.symbol}
+              current={price.current ?? "loading..."}
+              high={price.high ?? "-"}
+              low={price.low ?? "-"}
+              change={price.change ?? "-"}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          );
+        })}
+      </div>
     </div>
   );
 }
