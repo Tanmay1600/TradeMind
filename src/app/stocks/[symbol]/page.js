@@ -183,7 +183,7 @@ import StockChart from "../../../components/StockChart";
 import AdvisoryForm from "../../../components/AdvisoryForm";
 import { fetchStockQuote, fetchStockProfile } from "../../../utils/finnhub";
 import { fetchStockIntraday } from "../../../utils/yahooFinance"; // for chart
-
+import StockNews from "../../../components/StockNews";
 const API_KEY = "d3h51epr01qpep694urgd3h51epr01qpep694us0";
 
 export default function StockDetailPage() {
@@ -345,16 +345,14 @@ export default function StockDetailPage() {
 
             <StockChart data={historicalData} />
           </div>
+          
 
-          {/* Buy/Sell Buttons */}
-          <div className="flex gap-4 mt-4">
-            <button className="flex-1 bg-green-600 text-white py-2 rounded hover:bg-green-700 transition">
-              Buy
-            </button>
-            <button className="flex-1 bg-red-600 text-white py-2 rounded hover:bg-red-700 transition">
-              Sell
-            </button>
-          </div>
+          {/* Latest News Section */}
+{/* Latest News Section */}
+<div className="mt-6">
+  <h2 className="text-2xl font-bold text-green-900 mb-4">Latest News</h2>
+  <StockNews symbol={symbol} />
+</div>
         </div>
 
         {/* RIGHT: Advisory Section */}
