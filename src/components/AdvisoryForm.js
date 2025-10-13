@@ -106,6 +106,7 @@ export default function AdvisoryForm({ stockSymbol, setAdvisoryOutput }) {
           >
             <option>1 months</option>
             <option>2 months</option>
+            <option>3 months</option>
             <option>4 months</option>
             <option>5 months</option>
             <option>6 months</option>
