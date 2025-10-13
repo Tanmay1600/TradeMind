@@ -1,4 +1,4 @@
-const API_KEY = "d3h51epr01qpep694urgd3h51epr01qpep694us0";
+const API_KEY = process.env.NEXT_PUBLIC_FINNHUB_API_KEY;
 const BASE_URL = "https://finnhub.io/api/v1";
 
 // Fetch current stock quote

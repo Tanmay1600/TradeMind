@@ -363,17 +363,15 @@ export default function StockDetailPage() {
           />
 
           <div className="bg-white rounded-xl shadow-md p-6 min-h-[200px]">
-            <h2 className="text-2xl font-bold text-green-900 mb-4">
-              Advisory Output
-            </h2>
-            {advisoryOutput ? (
-              <div className="space-y-2 text-gray-800">{advisoryOutput}</div>
-            ) : (
-              <p className="text-gray-400">
-                AI roadmap will appear here after form submission.
-              </p>
-            )}
-          </div>
+  <h2 className="text-2xl font-bold text-green-900 mb-4">Advisory Output</h2>
+  {advisoryOutput ? (
+    <pre className="whitespace-pre-wrap text-gray-800">{advisoryOutput}</pre>
+  ) : (
+    <p className="text-gray-400">
+      AI roadmap will appear here after form submission.
+    </p>
+  )}
+</div>
         </div>
       </div>
     </div>

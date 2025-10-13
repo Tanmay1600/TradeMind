@@ -2,108 +2,123 @@
 import { useState } from "react";
 
 export default function AdvisoryForm({ stockSymbol, setAdvisoryOutput }) {
-  const [investment, setInvestment] = useState("");
-  const [targetPrice, setTargetPrice] = useState("");
-  const [stopLoss, setStopLoss] = useState("");
-  const [timeHorizon, setTimeHorizon] = useState("short-term");
-  const [risk, setRisk] = useState("medium");
-  const [notes, setNotes] = useState("");
+  const [amount, setAmount] = useState("");
+  const [duration, setDuration] = useState("6 months");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const advisoryData = {
-      stockSymbol,
-      investment,
-      targetPrice,
-      stopLoss,
-      timeHorizon,
-      risk,
-      notes,
-    };
-    console.log("Submitting advisory data:", advisoryData);
+    setLoading(true);
+    setAdvisoryOutput("Fetching strategy...");
 
-    // Example: setAdvisoryOutput to show AI text
-    setAdvisoryOutput?.(
-      `Based on your ${timeHorizon} outlook and ${risk} risk appetite, the advisory has been generated for ${stockSymbol}.`
-    );
+    try {
+      const response = await fetch(
+        "https://hr813pq6u9.execute-api.us-east-1.amazonaws.com/devv/",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            stock: stockSymbol,
+            amount: parseFloat(amount),
+            duration,
+          }),
+        }
+      );
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const data = await response.json();
+      console.log("Lambda Response:", data);
+
+      let strategyText = data.strategy;
+      let strategyObj = null;
+
+      try {
+        // Extract JSON part between ```json and ```
+        const jsonMatch = strategyText.match(/```json([\s\S]*?)```/);
+        if (jsonMatch) {
+          let cleaned = jsonMatch[1]
+            .replace(/\\n/g, "") // remove literal newlines
+            .replace(/\n/g, "") // remove actual newlines
+            .replace(/\s+/g, " ") // trim excessive spaces
+            .trim();
+
+          strategyObj = JSON.parse(cleaned);
+        } else {
+          // fallback if strategy is already plain JSON
+          strategyObj = JSON.parse(strategyText);
+        }
+      } catch (err) {
+        console.warn("Failed to parse strategy JSON:", err);
+      }
+
+      if (strategyObj) {
+        setAdvisoryOutput(
+          <div className="space-y-3 text-gray-800">
+            <p><strong>📊 Strategy:</strong> {strategyObj.strategy}</p>
+            <p><strong>💰 Buy Level:</strong> {strategyObj.buy_level}</p>
+            <p><strong>🎯 Sell Level:</strong> {strategyObj.sell_level}</p>
+            <p><strong>🛑 Stop Loss:</strong> {strategyObj.stop_loss}</p>
+            <p><strong>📈 Allocation Plan:</strong> {strategyObj.allocation_plan}</p>
+            <p><strong>⚠️ Risk Summary:</strong> {strategyObj.risk_summary}</p>
+          </div>
+        );
+      } else {
+        setAdvisoryOutput("⚠️ Unable to extract strategy details.");
+      }
+    } catch (err) {
+      console.error("Error calling Lambda:", err);
+      setAdvisoryOutput(`❌ Error: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6 w-full">
-      <h2 className="text-2xl font-bold text-green-900 mb-6">Trading Advisory</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <h2 className="text-2xl font-bold text-green-900 mb-6">
+        AI Trading Strategy
+      </h2>
 
+      <form onSubmit={handleSubmit} className="space-y-4">
         {/* Investment Amount */}
         <div className="flex flex-col">
-          <label className="text-gray-700 font-medium">Investment Amount ($)</label>
+          <label className="text-gray-700 font-medium">
+            Investment Amount ($)
+          </label>
           <input
             type="number"
-            value={investment}
-            onChange={(e) => setInvestment(e.target.value)}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
             placeholder="Enter amount"
             className="mt-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 text-black"
             required
           />
         </div>
 
-        {/* Target Price */}
+        {/* Duration */}
         <div className="flex flex-col">
-          <label className="text-gray-700 font-medium">Target Price ($)</label>
-          <input
-            type="number"
-            value={targetPrice}
-            onChange={(e) => setTargetPrice(e.target.value)}
-            placeholder="Enter target price"
-            className="mt-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 text-black"
-          />
-        </div>
-
-{/* Time Horizon */}
-<div className="flex flex-col">
-  <label className="text-gray-700 font-medium">Time Horizon</label>
-  <select
-    value={timeHorizon}
-    onChange={(e) => setTimeHorizon(e.target.value)}
-    className="mt-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 text-black"
-  >
-    <option value="1-month">1 Month</option>
-    <option value="2-months">2 Months</option>
-    <option value="3-months">3 Months</option>
-    <option value="4-months">4 Months</option>
-    <option value="5-months">5 Months</option>
-    <option value="6-months">6 Months</option>
-    <option value="7-months">7 Months</option>
-    <option value="8-months">8 Months</option>
-    <option value="9-months">9 Months</option>
-    <option value="10-months">10 Months</option>
-    <option value="11-months">11 Months</option>
-    <option value="1-year">1 Year</option>
-  </select>
-</div>
-
-
-        {/* Risk Appetite */}
-        <div className="flex flex-col">
-          <label className="text-gray-700 font-medium">Risk Appetite</label>
+          <label className="text-gray-700 font-medium">Duration</label>
           <select
-            value={risk}
-            onChange={(e) => setRisk(e.target.value)}
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
             className="mt-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 text-black"
           >
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
+            <option>3 months</option>
+            <option>6 months</option>
+            <option>9 months</option>
+            <option>12 months</option>
           </select>
         </div>
 
-       
-
-        {/* Submit Button */}
         <button
           type="submit"
-          className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition-colors"
+          disabled={loading}
+          className={`w-full text-white font-bold py-3 rounded-lg transition-colors ${
+            loading ? "bg-gray-400" : "bg-green-600 hover:bg-green-700"
+          }`}
         >
-          Generate Roadmap
+          {loading ? "Generating..." : "Generate Strategy"}
         </button>
       </form>
     </div>
