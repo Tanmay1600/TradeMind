@@ -104,9 +104,16 @@ export default function AdvisoryForm({ stockSymbol, setAdvisoryOutput }) {
             onChange={(e) => setDuration(e.target.value)}
             className="mt-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 text-black"
           >
-            <option>3 months</option>
+            <option>1 months</option>
+            <option>2 months</option>
+            <option>4 months</option>
+            <option>5 months</option>
             <option>6 months</option>
+            <option>7 months</option>
+            <option>8 months</option>
             <option>9 months</option>
+            <option>10 months</option>
+            <option>11 months</option>
             <option>12 months</option>
           </select>
         </div>
